@@ -5,6 +5,11 @@ module tracer_data
 ! Created by: Francis Vitt -- 2 May 2006
 ! Modified by : Jim Edwards -- 10 March 2009
 ! Modified by : Cheryl Craig and Chih-Chieh (Jack) Chen  -- February 2010
+! Modified by : Jinbo Xie --March 2023 -- made module public for diagnostic,
+!               modified interpolation module to add a new UCI interpolation
+!               algorithm that better conserves mass. The new Linoz_v3 option
+!               is input the interpolation module to switch to linoz_v3 new
+!               interpolation for linoz inputfiles.
 !----------------------------------------------------------------------- 
 
   use perf_mod,     only : t_startf, t_stopf
@@ -43,9 +48,11 @@ module tracer_data
   public :: read_trc_restart
   public :: init_trc_restart
   public :: incr_filename
-
-
-  ! !PUBLIC MEMBERS
+  !added public for linoz new function diagnostic
+  public :: read_next_trcdata
+  public :: interpolate_trcdata
+  public :: get_model_time
+  !!PUBLIC MEMBERS
 
   type input3d
      real(r8), dimension(:,:,:), pointer :: data => null()
@@ -127,6 +134,7 @@ module tracer_data
      logical :: initialized = .false.
      logical :: top_bndry = .false.
      logical :: stepTime = .false.  ! Do not interpolate in time, but use stepwise times
+     logical :: linoz_v3 = .false.  !set for linoz_v3 interpolation only
   endtype trfile
 
   integer, public, parameter :: MAXTRCRS = 100
@@ -346,6 +354,8 @@ contains
        call get_dimension( file%curr_fileid, 'altitude',     file%nlev, dimid=old_dimid, data=file%levs  )
     else
        call get_dimension( file%curr_fileid, 'lev', file%nlev, dimid=old_dimid, data=file%levs  )
+       !!added for Linoz_v3
+       call get_dimension( file%curr_fileid, 'ilev', file%nilev, data=file%ilevs  )
        if (old_dimid>0) then
           file%levs =  file%levs*100._r8 ! mbar->pascals
        endif
@@ -1731,6 +1741,8 @@ contains
     real(r8) :: ps(pcols)
     real(r8) :: datain(pcols,file%nlev)
     real(r8) :: pin(pcols,file%nlev)
+real(r8) :: pint(pcols,file%nilev)
+
     real(r8)            :: model_z(pverp)
     real(r8), parameter :: m2km  = 1.e-3_r8
     real(r8), pointer :: data_out3d(:,:,:)
@@ -1851,6 +1863,10 @@ contains
                    do k = 1,file%nlev
                       pin(:,k) = file%levs(k)
                    enddo
+                   !!Currently designed for linoz_v3 use only
+		   do k = 1,file%nilev
+                      pint(:,k) = file%ilevs(k)
+                   enddo
                 endif
              endif
 
@@ -1876,6 +1892,17 @@ contains
                    call vert_interp_mixrat(ncol,file%nlev,pver,state(c)%pint, &
                         datain, data_out(:,:), &
                         file%p0,ps,file%hyai,file%hybi)
+                else if(file%linoz_v3) then
+                !!uci chemistry for linoz-v3 that better conserves mass
+                !!uci interpolation for 55 out of 57 variables in linoz_v3
+                !!excluding t_clim, o3col_clim
+                   if (flds(f)%fldnam.ne.'t_clim          '\
+                  .and.flds(f)%fldnam.ne.'o3col_clim      ') then
+                   call vert_interp_uci(ncol, file%nlev, 100*file%ilevs, state(c)%pint, datain, data_out(:,:) )
+                   else
+                   call vert_interp(ncol, file%nlev, pin, state(c)%pmid, datain, data_out(:,:) )
+                   endif
+                !!
                 else
                    call vert_interp(ncol, file%nlev, pin, state(c)%pmid, datain, data_out(:,:) )
                 endif
@@ -2374,7 +2401,6 @@ contains
     real(r8), intent(in)  :: pmid(pcols,pver)          ! level pressures 
     real(r8), intent(in)  :: datain(pcols,levsiz)
     real(r8), intent(out) :: dataout(pcols,pver)     
-
     !
     ! local storage
     !
@@ -2431,6 +2457,85 @@ contains
 
 
   end subroutine vert_interp
+!------------------------------------------------------------------------------
+  SUBROUTINE vert_interp_uci(ncol,levsiz,pin,pint,datain,dataout)
+!-------------------------------------------------------------------------- 
+    ! 
+    ! Interpolate data from current time-interpolated values to model levels
+    !--------------------------------------------------------------------------
+    implicit none
+    ! Arguments
+    !
+    integer,  intent(in)  :: ncol
+    integer,  intent(in)  :: levsiz
+    real(r8), intent(in)  :: pin(levsiz+1) !inputdata interface level pressure
+    real(r8), intent(in)  :: pint(pcols,pver+1) !model interface level pressures
+    real(r8), intent(in)  :: datain(pcols,levsiz)
+    real(r8), intent(out) :: dataout(pcols,pver)
+    !
+    ! local storage
+    !
+    integer ::  i,k                   ! longitude index
+    ! Initialize index array
+    !
+    do i=1,ncol
+        do k=1,pver
+        call vert_interp_uci_single(pint(i,k+1),pint(i,k),dataout(i,k),pin,datain(i,:),levsiz)
+        enddo
+    enddo
+    !
+       END SUBROUTINE vert_interp_uci
+!------------------------------------------------------------------------------
+       SUBROUTINE vert_interp_uci_single(P1,P2,F0,PS,F,NL)
+!-----------------------------------------------------------------------
+!---For a CTM model level bounded by pressure P1 > P2, 
+!---    integrates (p-avg) the value F0 from F on the std (2-km) grid PS
+!---    assumes  top=PS(1) < PS(2) < PS(3) ... < PS(30) = 1000 mb
+!---NOTE reverse order in P's
+!---Assume that the quantity is constant over range halfway to layer above/below
+!---    and calculate box edges from P=0 to P=1000
+
+!---For a CTM model level between pressure range P1 > P2 (decreasing up)
+!---calculate the SOM Z-moments of the loss freq at std z* (log-p) intervals
+!--------  the pressure levels BETWEEN z* values are:
+!                         PS(i) < PS(i+1) bounds z*(i)
+!-------- The MOMENTS for a square-wave or 'bar': F(x)=F0  b<=x<=c, =0.0 else
+!-----     S0 =   f0 (x)                      [from x=b to x=c]
+!-----     S1 = 3 f0 (x^2 - x)                [from x=b to x=c]
+!-----     S2 = 5 f0 (2x^3 - 3x^2 + x)        [from x=b to x=c]
+!-----------------------------------------------------------------------
+      implicit none
+      integer,  intent(in) ::   NL
+      real(r8), intent(in) ::   P1,P2,PS(NL+1),F(NL)
+      real(r8), intent(out)::   F0
+      integer  I
+      real(r8)   XB,XC,PC,PB,SGNF0,PF1,PF2
+!-----------------------------------------------------------------------
+      F0 = 0._r8
+      !
+      do I = 1,NL
+        PF1=PS(I)
+        PF2=PS(I+1)
+        !
+        PC   = min(P1,PF2)
+        PB   = max(P2,PF1)
+        !
+        if (PC .gt. PB)  then
+!--- have condition:  P1 .ge. PC .gt. PB .ge. P2 
+!---      and          0 .le. XB .lt. XC .le. 1
+          XC = (PC-P2)/(P1-P2)
+          XB = (PB-P2)/(P1-P2)
+!-------- assume that the quantity, F, is constant over interval [XLO,XUP],
+!--------   F0: (c-b),   F1: 6((c2-c)-(b2-b)),  F2: 5((2c3-3c2+c)-(2b3-3b2+b))
+!-------- calculate its contribution to the moments in the interval [0,1]
+          F0 = F0 +F(I) *(XC -XB)
+        endif
+      enddo
+!---limiter on Z-moments: force monotonicity (tables can be + or -)
+      SGNF0 = sign(1._r8, F0)
+      F0 = abs(F0)
+      F0 = SGNF0 * F0
+      END SUBROUTINE vert_interp_uci_single
 
 !------------------------------------------------------------------------------
   subroutine vert_interp_ub( ncol, nlevs, plevs,  datain, dataout )
