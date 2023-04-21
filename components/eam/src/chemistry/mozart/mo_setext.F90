@@ -28,9 +28,11 @@ contains
     implicit none
 ! chem diags
     logical  :: history_gaschmbudget_2D
+    logical  :: history_chemdyg_summary
     !-----------------------------------------------------------------------
 
-    call phys_getopts( history_gaschmbudget_2D_out = history_gaschmbudget_2D   )
+    call phys_getopts( history_gaschmbudget_2D_out = history_gaschmbudget_2D, &
+                       history_chemdyg_summary_out = history_chemdyg_summary   )
 
     co_ndx    = get_extfrc_ndx( 'CO' )
     no_ndx    = get_extfrc_ndx( 'NO' )
@@ -70,7 +72,7 @@ contains
        call addfld( 'P_IONS', (/ 'lev' /), 'I', '/s', 'total ion production' )
     endif
 
-    if (history_gaschmbudget_2D) then
+    if (history_gaschmbudget_2D .or. history_chemdyg_summary) then
        call addfld( 'NO_TDLgt', (/ 'lev' /), 'A',  'kg N/m2/s', &
                        'external forcing for NO lightning emission' )
        call add_default( 'NO_TDLgt', 1, ' ' )
@@ -147,9 +149,11 @@ contains
 
 ! chem diags
     logical     :: history_gaschmbudget_2D
+    logical     :: history_chemdyg_summary
     real(r8)    :: no_tdlgt(ncol,pver)
 
-    call phys_getopts( history_gaschmbudget_2D_out = history_gaschmbudget_2D   )
+    call phys_getopts( history_gaschmbudget_2D_out = history_gaschmbudget_2D, &
+                       history_chemdyg_summary_out = history_chemdyg_summary   )
 
     extfrc(:,:,:) = 0._r8
 
@@ -187,7 +191,7 @@ contains
 
     call outfld( 'NO_Lightning', no_lgt(:ncol,:), ncol, lchnk )
 
-    if (history_gaschmbudget_2D) then
+    if (history_gaschmbudget_2D .or. history_chemdyg_summary) then
        do k = 1, pver
           !kgn per m2 per second
           no_tdlgt(:ncol,k) = prod_no(:ncol,k,lchnk)*(zint_rel(:ncol,k)-zint_rel(:ncol,k+1)) * 1.e6_r8 * 14.00674_r8 / avogadro 

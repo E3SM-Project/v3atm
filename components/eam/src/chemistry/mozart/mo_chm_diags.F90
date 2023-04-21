@@ -100,6 +100,7 @@ contains
     integer :: gaschmbudget_2D_L4_e
     logical :: history_UCIgaschmbudget_2D ! output 2D gas chemistry tracer concentrations and tendencies
     logical :: history_UCIgaschmbudget_2D_levels ! output 2D gas chemistry tracer concentrations and tendencies
+    logical :: history_chemdyg_summary 
     integer :: UCIgaschmbudget_2D_L1_s
     integer :: UCIgaschmbudget_2D_L1_e
     integer :: UCIgaschmbudget_2D_L2_s
@@ -131,6 +132,7 @@ contains
                        gaschmbudget_2D_L4_e_out = gaschmbudget_2D_L4_e, &
                     history_UCIgaschmbudget_2D_out = history_UCIgaschmbudget_2D, &
              history_UCIgaschmbudget_2D_levels_out = history_UCIgaschmbudget_2D_levels, &
+                       history_chemdyg_summary_out = history_chemdyg_summary, &
                        UCIgaschmbudget_2D_L1_s_out = UCIgaschmbudget_2D_L1_s, &
                        UCIgaschmbudget_2D_L1_e_out = UCIgaschmbudget_2D_L1_e, &
                        UCIgaschmbudget_2D_L2_s_out = UCIgaschmbudget_2D_L2_s, &
@@ -156,6 +158,9 @@ contains
        endif
        if (history_UCIgaschmbudget_2D_levels) then
           write(iulog,*) 'chm_diags_inti: history_UCIgaschmbudget_2D_levels = ', history_UCIgaschmbudget_2D_levels
+       endif
+       if (history_chemdyg_summary) then
+          write(iulog,*) 'chm_diags_inti: history_chemdyg_summary = ', history_chemdyg_summary
        endif
     endif
 
@@ -400,7 +405,29 @@ contains
              call addfld( trim(spc_name)//'_2DTDD', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to dry deposition')
              call addfld( trim(spc_name)//'_2DTDO', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to processes outside of chemistry')
           endif
-          if (history_UCIgaschmbudget_2D) then
+          if (history_chemdyg_summary) then
+             if (trim(spc_name) == 'O3') then
+             call addfld( trim(spc_name)//'_2DMSD', horiz_only, 'I', 'kg/m2', trim(attr)//' vertically integrated concentration after dry deposition')
+             call addfld( trim(spc_name)//'_2DTDE', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to explicit solver')
+             call addfld( trim(spc_name)//'_2DTDI', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to implicit solver')
+             call addfld( trim(spc_name)//'_2DTRI', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to reset mixing ratio after implicit solver')
+             call addfld( trim(spc_name)//'_2DTRE', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to reset mixing ratio after explicit solver')
+             call addfld( trim(spc_name)//'_2DTDA', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to aero_model_gasaerexch')
+             call addfld( trim(spc_name)//'_2DTDL', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to Linoz')
+             call addfld( trim(spc_name)//'_2DTDN', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to reset negative values to zero')
+             call addfld( trim(spc_name)//'_2DTDU', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to setting upper boundary values')
+             call addfld( trim(spc_name)//'_2DTDB', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to setting lower boundary values')
+             call addfld( trim(spc_name)//'_2DTDS', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to surface emission')
+             call addfld( trim(spc_name)//'_2DTDD', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to dry deposition')
+             call addfld( trim(spc_name)//'_2DTDO', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to processes outside of chemistry')
+             endif
+             if (trim(spc_name) == 'CO' .or. trim(spc_name) == 'NO' .or. trim(spc_name) == 'NO2' .or. trim(spc_name) == 'CH4') then
+             call addfld( trim(spc_name)//'_2DMSD', horiz_only, 'I', 'kg/m2', trim(attr)//' vertically integrated concentration after dry deposition')
+             call addfld( trim(spc_name)//'_2DTDS', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to surface emission')
+             call addfld( trim(spc_name)//'_2DTDD', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency due to dry deposition')
+             endif
+          endif
+          if (history_UCIgaschmbudget_2D .or. history_chemdyg_summary) then
              if (trim(spc_name) == 'CO') then
              call addfld( trim(spc_name)//'_2DCEP', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated explicit chemistry production rate after reset')
              call addfld( trim(spc_name)//'_2DCEL', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated explicit chemistry loss rate after reset')
@@ -501,6 +528,23 @@ contains
              call addfld( trim(spc_name)//'_2DTDS_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to surface emission')
              call addfld( trim(spc_name)//'_2DTDD_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to dry deposition')
              call addfld( trim(spc_name)//'_2DTDO_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to processes outside of chemistry')
+          endif
+          if (history_chemdyg_summary) then
+             if (trim(spc_name) == 'O3') then
+             call addfld( trim(spc_name)//'_2DMSD_trop', horiz_only, 'I', 'kg/m2', trim(attr)//' vertically integrated concentration in troposphere after dry deposition')
+             call addfld( trim(spc_name)//'_2DTDE_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to explicit solver')
+             call addfld( trim(spc_name)//'_2DTDI_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to implicit solver')
+             call addfld( trim(spc_name)//'_2DTRI_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to reset mixing ratio')
+             call addfld( trim(spc_name)//'_2DTRE_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to reset mixing ratio')
+             call addfld( trim(spc_name)//'_2DTDA_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to aero_model_gasaerexch')
+             call addfld( trim(spc_name)//'_2DTDL_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to Linoz')
+             call addfld( trim(spc_name)//'_2DTDN_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to reset negative values to zero')
+             call addfld( trim(spc_name)//'_2DTDU_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to setting upper boundary values')
+             call addfld( trim(spc_name)//'_2DTDB_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to setting lower boundary values')
+             call addfld( trim(spc_name)//'_2DTDS_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to surface emission')
+             call addfld( trim(spc_name)//'_2DTDD_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to dry deposition')
+             call addfld( trim(spc_name)//'_2DTDO_trop', horiz_only, 'A', 'kg/m2/s', trim(attr)//' vertically integrated tendency in troposphere due to processes outside of chemistry')
+             endif
           endif
           if (history_UCIgaschmbudget_2D_levels) then
              if (trim(spc_name) == 'CO') then
@@ -609,7 +653,29 @@ contains
                 call add_default( trim(spc_name)//'_2DTDD', 1, ' ' )
                 call add_default( trim(spc_name)//'_2DTDO', 1, ' ' )
              endif
-             if (history_UCIgaschmbudget_2D) then
+             if (history_chemdyg_summary) then
+                if (trim(spc_name) == 'O3') then
+                call add_default( trim(spc_name)//'_2DMSD', history_gaschmbudget_num, ' ' )
+                call add_default( trim(spc_name)//'_2DTDE', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDI', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTRI', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTRE', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDA', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDL', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDN', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDU', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDB', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDS', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDD', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDO', 1, ' ' )
+                endif
+                if (trim(spc_name) == 'CO' .or. trim(spc_name) == 'NO' .or. trim(spc_name) == 'NO2' .or. trim(spc_name) == 'CH4') then
+                call add_default( trim(spc_name)//'_2DMSD', history_gaschmbudget_num, ' ' )
+                call add_default( trim(spc_name)//'_2DTDS', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDD', 1, ' ' )
+                endif
+             endif
+             if (history_UCIgaschmbudget_2D .or. history_chemdyg_summary) then
                 if (trim(spc_name) == 'CO') then
                 call add_default( trim(spc_name)//'_2DCEP', 1, ' ' )
                 call add_default( trim(spc_name)//'_2DCEL', 1, ' ' )
@@ -714,6 +780,23 @@ contains
                 call add_default( trim(spc_name)//'_2DTDO_trop', 1, ' ' )
              endif
              endif
+             if (history_chemdyg_summary) then
+                if (trim(spc_name) == 'O3') then
+                call add_default( trim(spc_name)//'_2DMSD_trop', history_gaschmbudget_num, ' ' )
+                call add_default( trim(spc_name)//'_2DTDE_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDI_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTRI_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTRE_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDA_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDL_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDN_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDU_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDB_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDS_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDD_trop', 1, ' ' )
+                call add_default( trim(spc_name)//'_2DTDO_trop', 1, ' ' )
+                endif
+             endif
              if (history_UCIgaschmbudget_2D_levels) then
                 if (trim(spc_name) == 'CO') then
                 call add_default( trim(spc_name)//'_2DCEP_L1', 1, ' ' )
@@ -810,8 +893,9 @@ contains
     call add_default( 'TROPMASST', 1, ' ' )
 
     if (history_gaschmbudget .or. history_gaschmbudget_2D .or. history_gaschmbudget_2D_levels .or.&
-        history_UCIgaschmbudget_2D .or. history_UCIgaschmbudget_2D_levels) then
+        history_UCIgaschmbudget_2D .or. history_UCIgaschmbudget_2D_levels .or. history_chemdyg_summary) then
        call add_default( 'AREA', 1, ' ' )
+       call add_default( 'MASS', 1, ' ' )
     endif
 
     call addfld( 'WD_NOY', horiz_only, 'A', 'kg/s', 'NOy wet deposition' )
@@ -1477,6 +1561,7 @@ contains
     integer  :: gaschmbudget_2D_L4_e
     logical  :: history_UCIgaschmbudget_2D ! output 2D gas chemistry tracer concentrations and tendencies
     logical  :: history_UCIgaschmbudget_2D_levels ! output 2D gas chemistry tracer concentrations and tendencies within certain layers
+    logical  :: history_chemdyg_summary 
     integer  :: UCIgaschmbudget_2D_L1_s ! Start layer of L1 for gas chemistry tracer budget 
     integer  :: UCIgaschmbudget_2D_L1_e ! End layer of L1 for gas chemistry trracer budget
     integer  :: UCIgaschmbudget_2D_L2_s
@@ -1501,6 +1586,7 @@ contains
                        gaschmbudget_2D_L4_e_out = gaschmbudget_2D_L4_e, &
                        history_UCIgaschmbudget_2D_out = history_UCIgaschmbudget_2D, &
                        history_UCIgaschmbudget_2D_levels_out = history_UCIgaschmbudget_2D_levels, &
+                       history_chemdyg_summary_out = history_chemdyg_summary, &
                        UCIgaschmbudget_2D_L1_s_out = UCIgaschmbudget_2D_L1_s, &
                        UCIgaschmbudget_2D_L1_e_out = UCIgaschmbudget_2D_L1_e, &
                        UCIgaschmbudget_2D_L2_s_out = UCIgaschmbudget_2D_L2_s, &
@@ -1511,7 +1597,8 @@ contains
                        UCIgaschmbudget_2D_L4_e_out = UCIgaschmbudget_2D_L4_e )
 
     if ( .not. history_gaschmbudget .and. .not. history_gaschmbudget_2D .and. .not. history_gaschmbudget_2D_levels &
-         .and. .not. history_UCIgaschmbudget_2D .and. .not. history_UCIgaschmbudget_2D_levels) return
+         .and. .not. history_UCIgaschmbudget_2D .and. .not. history_UCIgaschmbudget_2D_levels &
+         .and. .not. history_chemdyg_summary) return
     !modification to avoid issues with debug built
     if (len(flag) >= 4) then 
             if (flag(1:4)=='2DCE' .or. flag(1:4)=='2DTE') then
@@ -1524,13 +1611,13 @@ contains
                    start_index = 1
                    end_index = gas_pcnst   
            endif
-   else
+    else
             start_index = 1
             end_index = gas_pcnst 
-   endif
+    endif
 
     do m = start_index,end_index
-       
+        
        if ( .not. any( aer_species == m ) .and. adv_mass(m) /= 0._r8 ) then
           if (flag(1:2) .ne. '2D') then
             if (flag=='MSL' .or. flag=='MSS' .or. flag=='MSD') then
@@ -1593,6 +1680,14 @@ contains
                !to avoid debug built issue
 
                    wrk_sum(:ncol) = 0.0_r8
+               if (history_chemdyg_summary) then
+                   if (trim(solsym(m)) == 'O3') then
+                      do k = 1, pver
+                            wrk_sum(:ncol) = wrk_sum(:ncol) + wrk(:ncol,k) * tropFlagInt(:ncol,k)
+                      enddo
+                      call outfld( trim(solsym(m))//'_'//flag, wrk_sum(:ncol), ncol ,lchnk )
+                   endif
+               else
                    if (trim(solsym(m))=='O3' .or. trim(solsym(m))=='O3LNZ' .or. &
                         trim(solsym(m))=='N2OLNZ' .or. trim(solsym(m))=='CH4LNZ') then
                       do k = 1, pver
@@ -1601,12 +1696,33 @@ contains
                       call outfld( trim(solsym(m))//'_'//flag, wrk_sum(:ncol), ncol ,lchnk )
                    endif
                endif
+               endif
 
             else
                do k=2,pver
                   wrk(:ncol,1) = wrk(:ncol,1) + wrk(:ncol,k)
                enddo
-               call outfld( trim(solsym(m))//'_'//flag, wrk(:ncol,1), ncol ,lchnk )
+               if (history_chemdyg_summary) then
+                   if (trim(solsym(m)) == 'O3') then
+                       if (flag(1:5)=='2DMSD' .or. flag(1:4)=='2DTD' .or. flag(1:4)=='2DCI' &
+                               .or.flag(1:4)=='2DTI' .or. flag(1:4)=='2DMP') then
+                          call outfld( trim(solsym(m))//'_'//flag, wrk(:ncol,1), ncol ,lchnk )
+                       endif
+                   endif 
+                   if (trim(solsym(m)) == 'CO') then
+                       if (flag(1:5)=='2DMSD' .or. flag(1:5)=='2DTDS' .or. flag(1:5)=='2DTDD' &
+                              .or. flag(1:4)=='2DCE') then
+                          call outfld( trim(solsym(m))//'_'//flag, wrk(:ncol,1), ncol ,lchnk )
+                       endif
+                   endif 
+                   if (trim(solsym(m)) == 'NO' .or. trim(solsym(m)) == 'NO2' .or. trim(solsym(m)) == 'CH4') then
+                       if (flag(1:5)=='2DMSD' .or. flag(1:5)=='2DTDS' .or. flag(1:5)=='2DTDD' ) then
+                          call outfld( trim(solsym(m))//'_'//flag, wrk(:ncol,1), ncol ,lchnk )
+                       endif
+                   endif 
+               else  
+                   call outfld( trim(solsym(m))//'_'//flag, wrk(:ncol,1), ncol ,lchnk )
+               endif
             endif
 
           endif
