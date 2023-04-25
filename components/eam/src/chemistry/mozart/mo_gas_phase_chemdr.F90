@@ -1034,10 +1034,6 @@ contains
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DTDI' )
        endif
-       if ( history_chemdyg_summary) then
-          call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old2(:ncol,:,:), &
-                                 pdeldry(:ncol,:), mbar, delt_inverse, '2DTDI' )
-       endif
        if ( history_gaschmbudget_2D) then
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DMSI' )
@@ -1055,8 +1051,8 @@ contains
        vmr_old(:ncol,:,:) = vmr(:ncol,:,:)
     endif
 
-    if ( history_UCIgaschmbudget_2D .or. history_UCIgaschmbudget_2D_levels .or. history_chemdyg_summary) then
-       if ( history_UCIgaschmbudget_2D .or. history_chemdyg_summary) then
+    if ( history_UCIgaschmbudget_2D .or. history_UCIgaschmbudget_2D_levels) then
+       if ( history_UCIgaschmbudget_2D) then
        if ( uci1_ndx > 0) then
           call gaschmmass_diags( lchnk, ncol, chem_prod(:ncol,:,:), vmr_old2(ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DTIP' )
@@ -1090,13 +1086,12 @@ contains
        enddo
     endif
 
-    if ( history_gaschmbudget .or. history_gaschmbudget_2D .or. history_gaschmbudget_2D_levels &
-            .or. history_chemdyg_summary) then
+    if ( history_gaschmbudget .or. history_gaschmbudget_2D .or. history_gaschmbudget_2D_levels) then
        if ( history_gaschmbudget  .and. uci1_ndx > 0) then
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, 'TRI' )
        endif
-       if ( history_gaschmbudget_2D .or. history_chemdyg_summary) then
+       if ( history_gaschmbudget_2D) then
        if ( uci1_ndx > 0) then
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DTRI' )
@@ -1121,48 +1116,47 @@ contains
       column_loop: do i = 1, ncol
       IF (k <= ltrop_sol(i)) CYCLE column_loop
       chemmp_prod(i,k,o3_ndx) = 2._r8 * diags_reaction_rates(i,k,jo2_b_ndx) & 
-         + diags_reaction_rates(i,k,lch3o2_no_ndx)*vmr_old2(i,k,ch3o2_ndx)*vmr_old2(i,k,no_ndx) &
-         + diags_reaction_rates(i,k,lno_ho2_ndx)*vmr_old2(i,k,no_ndx)*vmr_old2(i,k,ho2_ndx) &
-         + diags_reaction_rates(i,k,lc2h5o2_no_ndx)*vmr_old2(i,k,c2h5o2_ndx)*vmr_old2(i,k,no_ndx) &
-         + diags_reaction_rates(i,k,lch3co3_no_ndx)*vmr_old2(i,k,ch3co3_ndx)*vmr_old2(i,k,no_ndx) &
-         + diags_reaction_rates(i,k,lroho2_no_ndx)*vmr_old2(i,k,roho2_ndx)*vmr_old2(i,k,no_ndx) &
-         + diags_reaction_rates(i,k,lisopo2_no_ndx)*vmr_old2(i,k,isopo2_ndx)*vmr_old2(i,k,no_ndx) &
-         + diags_reaction_rates(i,k,lmvko2_no_ndx)*vmr_old2(i,k,mvko2_ndx)*vmr_old2(i,k,no_ndx) 
+         + diags_reaction_rates(i,k,lch3o2_no_ndx)*vmr(i,k,ch3o2_ndx)*vmr(i,k,no_ndx) &
+         + diags_reaction_rates(i,k,lno_ho2_ndx)*vmr(i,k,no_ndx)*vmr(i,k,ho2_ndx) &
+         + diags_reaction_rates(i,k,lc2h5o2_no_ndx)*vmr(i,k,c2h5o2_ndx)*vmr(i,k,no_ndx) &
+         + diags_reaction_rates(i,k,lch3co3_no_ndx)*vmr(i,k,ch3co3_ndx)*vmr(i,k,no_ndx) &
+         + diags_reaction_rates(i,k,lroho2_no_ndx)*vmr(i,k,roho2_ndx)*vmr(i,k,no_ndx) &
+         + diags_reaction_rates(i,k,lisopo2_no_ndx)*vmr(i,k,isopo2_ndx)*vmr(i,k,no_ndx) &
+         + diags_reaction_rates(i,k,lmvko2_no_ndx)*vmr(i,k,mvko2_ndx)*vmr(i,k,no_ndx) 
  
       chemmp_loss(i,k,o3_ndx) = (diags_reaction_rates(i,k,uci1_ndx) &
          + diags_reaction_rates(i,k,uci2_ndx) &
-         + diags_reaction_rates(i,k,uci3_ndx) * vmr_old2(i,k,ch4lnz_ndx) &
-         + diags_reaction_rates(i,k,lc2h4_o3_ndx)*vmr_old2(i,k,c2h4_ndx) &
-         + diags_reaction_rates(i,k,lisop_o3_ndx)*vmr_old2(i,k,isop_ndx)  &
-         + diags_reaction_rates(i,k,lo3_oh_ndx)*vmr_old2(i,k,oh_ndx)  &
-         + diags_reaction_rates(i,k,lo3_ho2_ndx)*vmr_old2(i,k,ho2_ndx)  &
-         + diags_reaction_rates(i,k,lmvkmacr_o3_ndx)*vmr_old2(i,k,mvkmacr_ndx) ) *vmr_old2(i,k,o3_ndx)  
+         + diags_reaction_rates(i,k,uci3_ndx) * vmr(i,k,ch4lnz_ndx) &
+         + diags_reaction_rates(i,k,lc2h4_o3_ndx)*vmr(i,k,c2h4_ndx) &
+         + diags_reaction_rates(i,k,lisop_o3_ndx)*vmr(i,k,isop_ndx)  &
+         + diags_reaction_rates(i,k,lo3_oh_ndx)*vmr(i,k,oh_ndx)  &
+         + diags_reaction_rates(i,k,lo3_ho2_ndx)*vmr(i,k,ho2_ndx)  &
+         + diags_reaction_rates(i,k,lmvkmacr_o3_ndx)*vmr(i,k,mvkmacr_ndx) ) *vmr(i,k,o3_ndx)  
 
       chem_prod(i,k,o3_ndx ) =  2._r8 * diags_reaction_rates(i,k,jo2_b_ndx) &
-         +  diags_reaction_rates(i,k,jno2_ndx)*vmr_old2(i,k,no2_ndx) &
-         +  diags_reaction_rates(i,k,jno3_a_ndx)*vmr_old2(i,k,no3_ndx) &
-         +  diags_reaction_rates(i,k,jn2o5_b_ndx)*vmr_old2(i,k,n2o5_ndx) &
-         +  diags_reaction_rates(i,k,po3_oh_ndx)*vmr_old2(i,k,oh_ndx)*vmr_old2(i,k,oh_ndx)
+         +  diags_reaction_rates(i,k,jno2_ndx)*vmr(i,k,no2_ndx) &
+         +  diags_reaction_rates(i,k,jno3_a_ndx)*vmr(i,k,no3_ndx) &
+         +  diags_reaction_rates(i,k,jn2o5_b_ndx)*vmr(i,k,n2o5_ndx) &
+         +  diags_reaction_rates(i,k,po3_oh_ndx)*vmr(i,k,oh_ndx)*vmr(i,k,oh_ndx)
 
       chem_loss(i,k,o3_ndx) = (diags_reaction_rates(i,k,uci1_ndx) &
          + diags_reaction_rates(i,k,uci2_ndx) &
-         + diags_reaction_rates(i,k,uci3_ndx) * vmr_old2(i,k,ch4lnz_ndx) &
-         + diags_reaction_rates(i,k,lc2h4_o3_ndx)*vmr_old2(i,k,c2h4_ndx) &
-         + diags_reaction_rates(i,k,lisop_o3_ndx)*vmr_old2(i,k,isop_ndx)  &
-         + diags_reaction_rates(i,k,lo3_oh_ndx)*vmr_old2(i,k,oh_ndx)  &
-         + diags_reaction_rates(i,k,lo3_ho2_ndx)*vmr_old2(i,k,ho2_ndx)  &
-         + diags_reaction_rates(i,k,lo3_no_ndx)*vmr_old2(i,k,no_ndx)  &
-         + diags_reaction_rates(i,k,lo3_no2_ndx)*vmr_old2(i,k,no2_ndx)  &
-         + diags_reaction_rates(i,k,lmvkmacr_o3_ndx)*vmr_old2(i,k,mvkmacr_ndx)  &
-         + het_rates(i,k,o3_ndx)) *vmr_old2(i,k,o3_ndx)  
+         + diags_reaction_rates(i,k,uci3_ndx) * vmr(i,k,ch4lnz_ndx) &
+         + diags_reaction_rates(i,k,lc2h4_o3_ndx)*vmr(i,k,c2h4_ndx) &
+         + diags_reaction_rates(i,k,lisop_o3_ndx)*vmr(i,k,isop_ndx)  &
+         + diags_reaction_rates(i,k,lo3_oh_ndx)*vmr(i,k,oh_ndx)  &
+         + diags_reaction_rates(i,k,lo3_ho2_ndx)*vmr(i,k,ho2_ndx)  &
+         + diags_reaction_rates(i,k,lo3_no_ndx)*vmr(i,k,no_ndx)  &
+         + diags_reaction_rates(i,k,lo3_no2_ndx)*vmr(i,k,no2_ndx)  &
+         + diags_reaction_rates(i,k,lmvkmacr_o3_ndx)*vmr(i,k,mvkmacr_ndx)  &
+         + het_rates(i,k,o3_ndx)) *vmr(i,k,o3_ndx)  
 
       end do column_loop
       end do level_loop
     endif !uci1_ndx
 
     if ( history_UCIgaschmbudget_2D .or. history_UCIgaschmbudget_2D_levels .or. history_chemdyg_summary) then
-       if ( history_UCIgaschmbudget_2D .or. history_chemdyg_summary) then
-       if ( uci1_ndx > 0) then
+       if ( history_UCIgaschmbudget_2D .and. uci1_ndx > 0) then
           call gaschmmass_diags( lchnk, ncol, chem_prod(:ncol,:,:), vmr_old(ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DCIP' )
           call gaschmmass_diags( lchnk, ncol, chem_loss(:ncol,:,:), vmr_old(:ncol,:,:), &
@@ -1172,6 +1166,11 @@ contains
           call gaschmmass_diags( lchnk, ncol, chemmp_loss(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DMPL' )
        endif
+       if ( history_chemdyg_summary .and. uci1_ndx > 0) then
+          call gaschmmass_diags( lchnk, ncol, chem_prod(:ncol,:,:), vmr_old(ncol,:,:), &
+                                 pdeldry(:ncol,:), mbar, delt_inverse, '2DCIP' )
+          call gaschmmass_diags( lchnk, ncol, chem_loss(:ncol,:,:), vmr_old(:ncol,:,:), &
+                                 pdeldry(:ncol,:), mbar, delt_inverse, '2DCIL' )
        endif
        if ( history_UCIgaschmbudget_2D_levels .and. uci1_ndx > 0) then
          call gaschmmass_diags( lchnk, ncol, chem_prod(:ncol,:,:), vmr_old(:ncol,:,:), &
@@ -1225,7 +1224,7 @@ contains
          call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                 pdeldry(:ncol,:), mbar, delt_inverse, 'TDE' )
        endif
-       if ( history_gaschmbudget_2D .or. history_chemdyg_summary) then
+       if ( history_gaschmbudget_2D ) then
          call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                 pdeldry(:ncol,:), mbar, delt_inverse, '2DTDE' )
        endif
@@ -1233,13 +1232,11 @@ contains
          call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                 pdeldry(:ncol,:), mbar, delt_inverse, '2DMSE' )
        endif
-       if ( history_UCIgaschmbudget_2D .or. history_chemdyg_summary) then
-       if ( uci1_ndx > 0) then
+       if ( history_UCIgaschmbudget_2D .and. uci1_ndx > 0) then
          call gaschmmass_diags( lchnk, ncol, chem_prod(:ncol,:,:), vmr_old(ncol,:,:), &
                                 pdeldry(:ncol,:), mbar, delt_inverse, '2DTEP' )
          call gaschmmass_diags( lchnk, ncol, chem_loss(:ncol,:,:), vmr_old(:ncol,:,:), &
                                 pdeldry(:ncol,:), mbar, delt_inverse, '2DTEL' )
-       endif
        endif
        if ( history_gaschmbudget_2D_levels ) then
          call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
@@ -1247,7 +1244,7 @@ contains
          call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                 pdeldry(:ncol,:), mbar, delt_inverse, '2DTDE_trop', tropFlagInt )
        endif
-       if ( history_chemdyg_summary ) then
+       if ( history_chemdyg_summary .and. uci1_ndx > 0) then
          call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                 pdeldry(:ncol,:), mbar, delt_inverse, '2DTDE_trop', tropFlagInt )
        endif
@@ -1291,11 +1288,9 @@ contains
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, 'TRE' )
        endif
-       if ( history_gaschmbudget_2D .or. history_chemdyg_summary) then
-       if ( uci1_ndx > 0) then
+       if ( history_gaschmbudget_2D .and. uci1_ndx > 0) then
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DTRE' )
-       endif
        endif
        if ( history_UCIgaschmbudget_2D .or. history_chemdyg_summary) then
        if ( uci1_ndx > 0) then
@@ -1429,7 +1424,7 @@ contains
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, 'TDA' )
        endif
-       if ( history_gaschmbudget_2D .or. history_chemdyg_summary) then
+       if ( history_gaschmbudget_2D ) then
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DTDA' )
        endif
@@ -1492,7 +1487,7 @@ contains
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, 'MSL' )
        endif
-       if ( history_gaschmbudget_2D .or. history_chemdyg_summary) then
+       if ( history_gaschmbudget_2D ) then
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DTDL' )
        endif
@@ -1528,7 +1523,7 @@ contains
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, 'TDN' )
        endif
-       if ( history_gaschmbudget_2D .or. history_chemdyg_summary) then
+       if ( history_gaschmbudget_2D ) then
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DTDN' )
        endif
@@ -1560,7 +1555,7 @@ contains
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, 'TDU' )
        endif
-       if ( history_gaschmbudget_2D .or. history_chemdyg_summary) then
+       if ( history_gaschmbudget_2D ) then
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DTDU' )
        endif
@@ -1596,7 +1591,7 @@ contains
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, 'TDB' )
        endif
-       if ( history_gaschmbudget_2D .or. history_chemdyg_summary) then
+       if ( history_gaschmbudget_2D ) then
           call gaschmmass_diags( lchnk, ncol, vmr(:ncol,:,:), vmr_old(:ncol,:,:), &
                                  pdeldry(:ncol,:), mbar, delt_inverse, '2DTDB' )
        endif
