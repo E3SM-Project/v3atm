@@ -1288,7 +1288,14 @@ contains
                                                                 (/ flds(f)%order(ZA_LATDIM),flds(f)%order(ZA_LEVDIM)/), &
                                                                 vid_srf=flds(f+57)%var_id )
                      elseif (index(flds(f)%fldnam,"_srf").gt.0) then
-                             continue
+                             !!single time variable for globe
+                             if (index(flds(f)%fldnam,"ch4_avg_srf").gt.0) then
+                                     !1 for single variable
+                                     call read_zasrf_trc_linoz(fids(i), flds(f)%var_id, flds(f)%input(i)%data, strt3, cnt3, file, 1)
+                             else
+                                     !2 for surface variable
+                                     call read_zasrf_trc_linoz(fids(i), flds(f)%var_id, flds(f)%input(i)%data, strt3, cnt3, file, 2)
+                             endif
                      else
                              call read_za_trc_linoz( fids(i), flds(f)%var_id, flds(f)%input(i)%data, strt3, cnt3, file, &
                                                                 (/ flds(f)%order(ZA_LATDIM),flds(f)%order(ZA_LEVDIM) /) )
@@ -1657,7 +1664,6 @@ contains
     integer :: cnt_srf(2)
     integer :: strt_srf(2)
     !!
-
     type(interp_type) :: lat_wgts
     real(r8) :: to_lats(pcols), to_lons(pcols), wrk(pcols)
     real(r8), allocatable, target :: wrk2d(:,:)
@@ -1720,12 +1726,9 @@ contains
        wrk2d_in => wrk2d
     end if
 
-
-
     do c=begchunk,endchunk
        ncols = get_ncols_p(c)
        call get_rlat_all_p(c, pcols, to_lats)
-
        call lininterp_init(file%lats, file%nlat, to_lats, ncols, 1, lat_wgts)
        do k=1,file%nlev
           call lininterp(wrk2d_in(:,k), file%nlat, wrk(1:ncols), ncols, lat_wgts)
@@ -1745,6 +1748,99 @@ contains
     end if
 !    if(dycore_is('LR')) call polar_average(loc_arr)
   end subroutine read_za_trc_linoz
+
+!------------------------------------------------------------------------
+  subroutine read_zasrf_trc_linoz( fid, vid, loc_arr, strt, cnt, file, is_single)
+    use interpolate_data, only : lininterp_init, lininterp, interp_type, lininterp_finish
+    use phys_grid,        only : pcols, begchunk, endchunk, get_ncols_p, get_rlat_all_p, get_rlon_all_p
+    !!
+    implicit none
+    type(file_desc_t), intent(in) :: fid
+    type(var_desc_t),  intent(in) :: vid
+    integer,           intent(in) :: strt(:), cnt(:)
+    integer,           intent(in) :: is_single!1 for single, 2 for surface variable
+    real(r8),          intent(out):: loc_arr(:,:,:)
+    type (trfile),     intent(in) :: file
+    !!
+    real(r8), allocatable, target :: wrk(:)
+    real(r8), pointer :: wrk_in(:)
+    type(interp_type) :: lat_wgts
+    real(r8) :: to_lats(pcols), to_lons(pcols)
+    integer :: c, k, ierr, ncols
+    integer :: cnt_srf(2)
+    integer :: strt_srf(2)
+    integer :: cnt_sin(1)
+    integer :: strt_sin(1)
+    !!
+    nullify(wrk_in)
+    allocate( wrk(cnt(1)), stat=ierr )
+    if( ierr /= 0 ) then
+       write(iulog,*) 'read_zasrf_trc_linoz: wrk allocation error = ',ierr
+       call endrun
+    end if
+    !!
+    cnt_srf(1)=cnt(1)
+    cnt_srf(2)=cnt(3)
+    cnt_sin(1)=cnt(1)
+    strt_srf(1)=strt(1)
+    strt_srf(2)=strt(3)
+    strt_sin(1)=strt(1)
+    !!
+    if (is_single.eq.1) then 
+    !determine is 1d time series (time) or 2d surface variable (time,lat)
+    !for surface variable with the dimension of (time), fill (time,lat), and use (time,1) only
+        ierr = pio_get_var( fid, vid, strt_sin, cnt_sin, wrk )
+        !!
+        if(associated(wrk_in)) then
+                wrk_in = reshape( wrk(:),(/1/))
+                deallocate(wrk)
+        else
+                wrk_in => wrk
+        end if
+        !!
+        do c=begchunk,endchunk
+           ncols = get_ncols_p(c)
+           do k=1,1
+           loc_arr(1:ncols,k,c-begchunk+1) = wrk(1)
+           enddo
+        enddo
+        !!
+       if(allocated(wrk)) then
+       deallocate(wrk)
+       else
+       deallocate(wrk_in)
+       end if
+    else
+    !for surface variable with the dimension of (time,lat)
+        ierr = pio_get_var( fid, vid, strt_srf, cnt_srf, wrk )
+        !!
+        if(associated(wrk_in)) then
+                wrk_in = reshape( wrk(:),(/file%nlat/))
+                deallocate(wrk)
+        else
+                wrk_in => wrk
+        end if
+        !!
+        do c=begchunk,endchunk
+           ncols = get_ncols_p(c)
+           call get_rlat_all_p(c, pcols, to_lats)
+           call lininterp_init(file%lats, file%nlat, to_lats, ncols, 1, lat_wgts)
+           do k=1,1
+           call lininterp(wrk_in(:), file%nlat, wrk(1:ncols), ncols, lat_wgts)
+           loc_arr(1:ncols,k,c-begchunk+1) = wrk(1:ncols)
+           end do
+           call lininterp_finish(lat_wgts)
+        end do
+    endif
+    !!
+    if(allocated(wrk)) then
+       deallocate(wrk)
+    else
+       deallocate(wrk_in)
+    end if
+    !!
+    end if
+    end subroutine read_zasrf_trc_linoz
 
 !------------------------------------------------------------------------
 
@@ -2613,8 +2709,8 @@ contains
     integer ::  i,k                   ! longitude index
     ! Initialize index array
     !
-    do k=1,pver
-        do i=1,ncol
+    do i=1,ncol
+        do k=1,pver
         call vert_interp_uci_single(pint(i,k+1),pint(i,k),dataout(i,k),pin,datain(i,:),levsiz)
         enddo
     enddo

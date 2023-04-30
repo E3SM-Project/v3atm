@@ -196,7 +196,7 @@ end subroutine linoz_readnl
             write(iulog,*) 'linoz_readnl, linoz: Both linoz_v2 and linoz_v3 are true. This is wrong! please check.'
             return
     elseif (linoz_v2.eq..false..and.linoz_v3.eq..false.) then
-            write(iulog,*) 'linoz_readnl, linoz: Both linoz_v2 and linoz_v3 are false, which can be correct, but be sure that is intended!'
+            write(iulog,*) 'linoz_readnl, linoz: Both linoz_v2 and linoz_v3 are false, please check if these setting are correct.'
     endif
     !!
     call linoz_data_init()
@@ -274,7 +274,8 @@ end subroutine linoz_readnl
                               lnoy_dPmL_dCH4_ndx,lnoy_dPmL_dH2O_ndx, lnoy_dPmL_dT_ndx,  lnoy_dPmL_dO3col_ndx,&
                               nch4_PmL_clim_ndx, nch4_dPmL_dO3_ndx,  nch4_dPmL_dN2O_ndx,nch4_dPmL_dNOy_ndx,  &
                               nch4_dPmL_dCH4_ndx,nch4_dPmL_dH2O_ndx, nch4_dPmL_dT_ndx,  nch4_dPmL_dO3col_ndx,&
-                              cariolle_pscs_ndx, o3lbs_ndx
+                              cariolle_pscs_ndx, o3lbs_ndx,o3_clim_srf_ndx,n2o_clim_srf_ndx,noy_clim_srf_ndx,&
+                              ch4_clim_srf_ndx,  ch4_avg_srf_ndx
     !
     integer,  intent(in)                           :: ncol                ! number of columns in chunk
     integer,  intent(in)                           :: lchnk               ! chunk index
@@ -324,6 +325,11 @@ end subroutine linoz_readnl
     real(r8), dimension(:,:), pointer :: linoz_dPmL_dO3col
     real(r8), dimension(:,:), pointer :: linoz_cariolle_psc
     real(r8), dimension(:,:), pointer :: linoz_o3lbs
+    real(r8), dimension(:,:), pointer :: linoz_ch4_avg_srf
+    real(r8), dimension(:,:), pointer :: linoz_o3_clim_srf
+    real(r8), dimension(:,:), pointer :: linoz_n2o_clim_srf
+    real(r8), dimension(:,:), pointer :: linoz_noy_clim_srf
+    real(r8), dimension(:,:), pointer :: linoz_ch4_clim_srf
     ! real O3 variables
     real(r8), dimension(ncol,pver) :: do3_linoz_du, do3_linoz_psc_du
     real(r8), dimension(ncol) :: twod_do3_linoz
@@ -361,6 +367,13 @@ end subroutine linoz_readnl
        linoz_t_clim       => fields(t_clim_ndx)       %data(:,:,lchnk )
        linoz_o3col_clim   => fields(o3col_clim_ndx)   %data(:,:,lchnk )
        linoz_o3lbs        => fields(o3lbs_ndx)        %data(:,:,lchnk )
+       !!add srf
+       linoz_o3_clim_srf  => fields( o3_clim_srf_ndx)  %data(:,:,lchnk )
+       linoz_n2o_clim_srf => fields(n2o_clim_srf_ndx)  %data(:,:,lchnk )
+       linoz_noy_clim_srf => fields(noy_clim_srf_ndx)  %data(:,:,lchnk )
+       linoz_ch4_clim_srf => fields(ch4_clim_srf_ndx)  %data(:,:,lchnk )
+       !!add srf
+       linoz_ch4_avg_srf  => fields(ch4_avg_srf_ndx)   %data(:,:,lchnk )
 
        dO3(:,:)     =   o3_vmr(:,:)  - linoz_o3_clim(:,:)
        dN2O(:,:)    =  n2o_vmr(:,:)  - linoz_n2o_clim(:,:)
@@ -375,12 +388,13 @@ end subroutine linoz_readnl
 ! output surface constant concentration to control surface sink/source
 !
 !       write(iulog,*)'pver=',pver
-
-       xsfc(1,:)=   linoz_o3lbs(:,pver) !  ozone surface constant (varying in lat)
-       xsfc(2,:)=   linoz_n2o_clim(:,pver) !  n2o (constant throughout latitude)
-       xsfc(3,:)=   linoz_o3lbs(:,pver)*3.e-3_r8  !noylnz
-       xsfc(4,:)=   linoz_ch4_clim(:,pver) ! ch4 (constant throughout latitude)
-       ch4max =     maxval(linoz_ch4_clim(1:ncol,pver)) 
+       !use srf data from linv3 input data directly
+       xsfc(1,:)=   linoz_o3_clim_srf(:,1)  ! ozone surface constant (varying in lat)
+       xsfc(2,:)=   linoz_n2o_clim_srf(:,1) !  n2o (constant throughout latitude)
+       xsfc(3,:)=   linoz_noy_clim_srf(:,1) !noylnz
+       xsfc(4,:)=   linoz_ch4_clim_srf(:,1) ! ch4 (constant throughout latitude)
+       !get ch4 srf avg from linv3 input data
+       ch4max =     linoz_ch4_avg_srf(1,1)
        pw= 2.0_r8 * ch4max + 3.65e-6_r8 
  
 ! OZONE P-L terms !unit vmr/sec
