@@ -196,7 +196,7 @@ end subroutine linoz_readnl
             write(iulog,*) 'linoz_readnl, linoz: Both linoz_v2 and linoz_v3 are true. This is wrong! please check.'
             return
     elseif (linoz_v2.eq..false..and.linoz_v3.eq..false.) then
-            write(iulog,*) 'linoz_readnl, linoz: Both linoz_v2 and linoz_v3 are false, please check if these setting are correct.'
+            write(iulog,*) 'linoz_readnl, linoz: Both linoz_v2 and linoz_v3 are false, which can be correct, but be sure that is intended!'
     endif
     !!
     call linoz_data_init()
@@ -393,7 +393,7 @@ end subroutine linoz_readnl
        xsfc(2,:)=   linoz_n2o_clim_srf(:,1) !  n2o (constant throughout latitude)
        xsfc(3,:)=   linoz_noy_clim_srf(:,1) !noylnz
        xsfc(4,:)=   linoz_ch4_clim_srf(:,1) ! ch4 (constant throughout latitude)
-       !get ch4 srf avg from linv3 input data
+       !get ch4 global avg from linv3 input data
        ch4max =     linoz_ch4_avg_srf(1,1)
        pw= 2.0_r8 * ch4max + 3.65e-6_r8 
  
