@@ -37,7 +37,7 @@ module linoz_data
   logical :: has_linozv3_data 
   logical :: has_linoz_data 
 
-  integer, parameter, public :: N_FLDS     = 65
+  integer, parameter, public :: N_FLDS     = 64
   integer :: number_flds
 
   character(len=256) :: filename = ''
@@ -67,8 +67,7 @@ module linoz_data
          'nch4_dPmL_dCH4  ','nch4_dPmL_dH2O  ','nch4_dPmL_dT    ','nch4_dPmL_dO3col',&
          'cariolle_pscs   ','o3lbs           ',&
          'o3_clim_srf     ','n2o_clim_srf    ','noy_clim_srf    ','ch4_clim_srf    ',&!7 srf clim-terms
-         'h2o_clim_srf    ','t_clim_srf      ','o3col_clim_srf  ',&
-         'ch4_avg_srf     '/)!ch4 surface boundary
+         'h2o_clim_srf    ','t_clim_srf      ','o3col_clim_srf  '/)
 
 !added o3lbs that stores prescribed o3 for CMIP surface layers evolving from 1850-2015 at L=end,and repeating at L=end-1 (237hPa) so the values won't be 
 !significantly changed due to vertical interpolations from Linoz levels to model surface levels  
@@ -90,8 +89,7 @@ module linoz_data
          '1/vmr/s         ','1/vmr/s         ','1/K/s           ','1/DU/s          ',&
          '1/s             ','vmr             ',&
          'vmr             ','vmr             ','vmr             ','vmr             ',&!srf clim
-         'vmr             ','K               ','Dobson Units    ',&
-         'vmr             '/)
+         'vmr             ','K               ','Dobson Units    '/)
 
   integer :: index_map(N_FLDS)
 
@@ -166,8 +164,6 @@ module linoz_data
   integer, public, parameter :: h2o_clim_srf_ndx  =    62
   integer, public, parameter :: t_clim_srf_ndx    =    63
   integer, public, parameter :: o3col_clim_srf_ndx=    64
-
-  integer, public, parameter :: ch4_avg_srf_ndx   =    65
 
 contains
 
