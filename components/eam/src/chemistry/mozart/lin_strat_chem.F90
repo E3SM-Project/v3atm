@@ -125,7 +125,7 @@ end subroutine linoz_readnl
     ! input parameters from netcdf file and interpolate to
     ! present model grid
     !
-    use linoz_data,   only : linoz_data_init, has_linozv3_data, has_linoz_data
+    use linoz_data,   only : linoz_data_init, has_linozv3_data, has_linoz_data,file
     use ppgrid,       only : pver
     use mo_chem_utls, only : get_spc_ndx, get_rxt_ndx
     use cam_history,  only : addfld, horiz_only, add_default
@@ -188,6 +188,17 @@ end subroutine linoz_readnl
 !     
 !   initialize the linoz data
 
+    !!set true for linoz_v3 interpolation in interpolation
+    if (linoz_v3) file%linoz_v3=.true.
+    if (linoz_v2) file%linoz_v2=.true.
+    !!
+    if (linoz_v2.eq..true. .and.linoz_v3.eq..true. ) then
+            write(iulog,*) 'linoz_readnl, linoz: Both linoz_v2 and linoz_v3 are true. This is wrong! please check.'
+            return
+    elseif (linoz_v2.eq..false..and.linoz_v3.eq..false.) then
+            write(iulog,*) 'linoz_readnl, linoz: Both linoz_v2 and linoz_v3 are false, which can be correct, but be sure that is intended!'
+    endif
+    !!
     call linoz_data_init()
 
     ! define additional output
@@ -263,7 +274,8 @@ end subroutine linoz_readnl
                               lnoy_dPmL_dCH4_ndx,lnoy_dPmL_dH2O_ndx, lnoy_dPmL_dT_ndx,  lnoy_dPmL_dO3col_ndx,&
                               nch4_PmL_clim_ndx, nch4_dPmL_dO3_ndx,  nch4_dPmL_dN2O_ndx,nch4_dPmL_dNOy_ndx,  &
                               nch4_dPmL_dCH4_ndx,nch4_dPmL_dH2O_ndx, nch4_dPmL_dT_ndx,  nch4_dPmL_dO3col_ndx,&
-                              cariolle_pscs_ndx, o3lbs_ndx
+                              cariolle_pscs_ndx, o3lbs_ndx,o3_clim_srf_ndx,n2o_clim_srf_ndx,noy_clim_srf_ndx,&
+                              ch4_clim_srf_ndx
     !
     integer,  intent(in)                           :: ncol                ! number of columns in chunk
     integer,  intent(in)                           :: lchnk               ! chunk index
@@ -313,6 +325,10 @@ end subroutine linoz_readnl
     real(r8), dimension(:,:), pointer :: linoz_dPmL_dO3col
     real(r8), dimension(:,:), pointer :: linoz_cariolle_psc
     real(r8), dimension(:,:), pointer :: linoz_o3lbs
+    real(r8), dimension(:,:), pointer :: linoz_o3_clim_srf
+    real(r8), dimension(:,:), pointer :: linoz_n2o_clim_srf
+    real(r8), dimension(:,:), pointer :: linoz_noy_clim_srf
+    real(r8), dimension(:,:), pointer :: linoz_ch4_clim_srf
     ! real O3 variables
     real(r8), dimension(ncol,pver) :: do3_linoz_du, do3_linoz_psc_du
     real(r8), dimension(ncol) :: twod_do3_linoz
@@ -350,6 +366,11 @@ end subroutine linoz_readnl
        linoz_t_clim       => fields(t_clim_ndx)       %data(:,:,lchnk )
        linoz_o3col_clim   => fields(o3col_clim_ndx)   %data(:,:,lchnk )
        linoz_o3lbs        => fields(o3lbs_ndx)        %data(:,:,lchnk )
+       !!add srf
+       linoz_o3_clim_srf  => fields( o3_clim_srf_ndx)  %data(:,:,lchnk )
+       linoz_n2o_clim_srf => fields(n2o_clim_srf_ndx)  %data(:,:,lchnk )
+       linoz_noy_clim_srf => fields(noy_clim_srf_ndx)  %data(:,:,lchnk )
+       linoz_ch4_clim_srf => fields(ch4_clim_srf_ndx)  %data(:,:,lchnk )
 
        dO3(:,:)     =   o3_vmr(:,:)  - linoz_o3_clim(:,:)
        dN2O(:,:)    =  n2o_vmr(:,:)  - linoz_n2o_clim(:,:)
@@ -364,12 +385,14 @@ end subroutine linoz_readnl
 ! output surface constant concentration to control surface sink/source
 !
 !       write(iulog,*)'pver=',pver
-
-       xsfc(1,:)=   linoz_o3lbs(:,pver) !  ozone surface constant (varying in lat)
-       xsfc(2,:)=   linoz_n2o_clim(:,pver) !  n2o (constant throughout latitude)
-       xsfc(3,:)=   linoz_o3lbs(:,pver)*3.e-3_r8  !noylnz
-       xsfc(4,:)=   linoz_ch4_clim(:,pver) ! ch4 (constant throughout latitude)
-       ch4max =     maxval(linoz_ch4_clim(1:ncol,pver)) 
+       !use srf data from linv3 input data directly
+       xsfc(1,:)=   linoz_o3_clim_srf(:,1)  ! ozone surface constant (varying in lat)
+       xsfc(2,:)=   linoz_n2o_clim_srf(:,1) !  n2o (constant throughout latitude)
+       xsfc(3,:)=   linoz_noy_clim_srf(:,1) !noylnz
+       xsfc(4,:)=   linoz_ch4_clim_srf(:,1) ! ch4 (constant throughout latitude)
+       ! The  local maxval calculation causes NBFB when ncol varies due to threading or pe-layout change
+       ! Tentatively uses a fixed value
+       ch4max =     1.8e-6_r8
        pw= 2.0_r8 * ch4max + 3.65e-6_r8 
  
 ! OZONE P-L terms !unit vmr/sec
