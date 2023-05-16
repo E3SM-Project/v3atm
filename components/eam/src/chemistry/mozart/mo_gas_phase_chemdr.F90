@@ -1020,15 +1020,15 @@ contains
          + het_rates(i,k,o3_ndx)) *vmr(i,k,o3_ndx)  
 
       ! closure check - non-closure due to non-convergent in implicit solver 
-         p_l_net = chem_prod(i,k,o3_ndx)-chem_loss(i,k,o3_ndx)
-         tmp_tdi = (vmr(i,k,o3_ndx)-vmr_old2(i,k,o3_ndx))/delt
-         tmp_a = (p_l_net - tmp_tdi) * (p_l_net - tmp_tdi)
-         tmp_b = tmp_tdi * tmp_tdi
-         if (sqrt(tmp_a/tmp_b) > 1.e-6) then
-            vmr(i,k,o3_ndx) = vmr_old2(i,k,o3_ndx)
-            chem_prod(i,k,o3_ndx) = 0. 
-            chem_loss(i,k,o3_ndx) = 0.
-         end if
+         !p_l_net = chem_prod(i,k,o3_ndx)-chem_loss(i,k,o3_ndx)
+         !tmp_tdi = (vmr(i,k,o3_ndx)-vmr_old2(i,k,o3_ndx))/delt
+         !tmp_a = (p_l_net - tmp_tdi) * (p_l_net - tmp_tdi)
+         !tmp_b = tmp_tdi * tmp_tdi
+         !if (sqrt(tmp_a/tmp_b) > 1.e-6) then
+         !   vmr(i,k,o3_ndx) = vmr_old2(i,k,o3_ndx)
+         !   chem_prod(i,k,o3_ndx) = 0. 
+         !   chem_loss(i,k,o3_ndx) = 0.
+         !end if
 
       end do column0_loop
       end do level0_loop
@@ -1570,18 +1570,20 @@ contains
        do m = 1,pcnst
           n = map2chm( m )
           if ( n > 0 ) then
-            if ( any( cflx(:ncol,m) /= 0._r8 ) ) then
+           do i=1,ncol
+            if ( cflx(i,m) /= 0._r8  ) then
               if ( .not. any( aer_species == n ) .and. adv_mass(n) /= 0._r8 ) then
                 do k = pver, pver-srf_emit_nlayer+1, -1 ! loop from bottom to top
                   ! kg/m2, tracer mass
-                  wrk(:ncol,k) = adv_mass(n)*vmr(:ncol,k,n)/mbar(:ncol,k) &
-                                    *pdeldry(:ncol,k)*rga
-                  tmp(:ncol) = wrk(:ncol,k) + cflx(:ncol,m)*delt/dble(srf_emit_nlayer)
-                  vmr(:ncol,k,n) = tmp(:ncol)*mbar(:ncol,k)/adv_mass(n)/pdeldry(:ncol,k)/rga
+                  wrk(i,k) = adv_mass(n)*vmr(i,k,n)/mbar(i,k) &
+                                    *pdeldry(i,k)*rga
+                  tmp(i) = wrk(i,k) + cflx(i,m)*delt/dble(srf_emit_nlayer)
+                  vmr(i,k,n) = tmp(i)*mbar(i,k)/adv_mass(n)/pdeldry(i,k)/rga
                 end do
-                cflx(:ncol,m) = 0._r8
+                cflx(i,m) = 0._r8
               endif
             endif
+           end do
           endif
        end do
     endif
