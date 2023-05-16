@@ -2040,6 +2040,9 @@ subroutine tphysbc (ztodt,               &
     real(r8) :: prec_sed_macmic(pcols)
     real(r8) :: snow_sed_macmic(pcols)
 
+    !for tropopause check when no E90 input
+    integer :: e90_ndx
+
     ! energy checking variables
     real(r8) :: zero(pcols)                    ! array of zeros
     real(r8) :: zero_sc(pcols*psubcols)        ! array of zeros
@@ -2766,7 +2769,10 @@ end if ! l_rad
     ! Diagnose the location of the tropopause and its location to the history file(s).
     call t_startf('tropopause')
     call tropopause_output(state)
+    e90_ndx = get_spc_ndx('E90')
+    if (e90_ndx > 0) then
     call tropopause_e90_3d_output(state)
+    endif
     call t_stopf('tropopause')
 
     ! Save atmospheric fields to force surface models
