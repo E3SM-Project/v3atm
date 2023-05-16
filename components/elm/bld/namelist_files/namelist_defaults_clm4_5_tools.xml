@@ -489,7 +489,7 @@ attributes from the config_cache.xml file (with keys converted to upper-case).
 <mksrf_fvegtyp hgrid="0.5x0.5" sim_year="2015" crop="off" >lnd/clm2/rawdata/LUT_LUH2_HIST_LUH1f_07082020/LUT_LUH2_historical_2015_c07082020.nc</mksrf_fvegtyp>
 
 <!-- All RCPs start with the ending historical file in 2015 -->
-<!-- For transient LULCC only 2 RCPs are currently available: SSP2 RCP4.5 and SSP5 RCP8.5 (LUT files need to be created for the others) -->
+<!-- For transient LULCC only 2 RCPs are currently available: SSP2 RCP4.5, SSP3 RCP7.0, and SSP5 RCP8.5 (LUT files need to be created for the others) -->
 <!-- But include the start year for the others in case the files become available -->
 <!-- Recall that sim_year just denotes the creation of a file for that year; transient LULCC years processed are based on the list in the file noted in the namelist -->
 <!-- See below for the files for the other years (as available) -->
