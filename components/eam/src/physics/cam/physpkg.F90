@@ -2770,9 +2770,7 @@ end if ! l_rad
     call t_startf('tropopause')
     call tropopause_output(state)
     e90_ndx = get_spc_ndx('E90')
-    if (e90_ndx > 0) then
     call tropopause_e90_3d_output(state)
-    endif
     call t_stopf('tropopause')
 
     ! Save atmospheric fields to force surface models
